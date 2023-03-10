@@ -1,0 +1,84 @@
+update dan upgrade system
+
+sudo apt-get update && sudo apt-get upgrade -y
+install tools yang dibutuhkan
+
+sudo apt install python3-dev libffi-dev gcc libssl-dev -y
+membuat dan menggunakan virtual environtment
+
+sudo apt install python3.8-venv -y
+python3 -m venv /home/openstack/venv1
+source /home/openstack/venv1/bin/activate
+Install kolla ansible dengan pip
+
+pip install -U pip
+pip install 'ansible<5.0'
+pip install git+https://opendev.org/openstack/kolla-ansible@stable/xena
+buat folder kolla dan memasukan sample configuration
+
+sudo mkdir -p /etc/kolla
+sudo chown $USER:$USER /etc/kolla
+cp -r /home/openstack/venv1/share/kolla-ansible/etc_examples/kolla/* /etc/kolla
+cp /home/openstack/venv1/share/kolla-ansible/ansible/inventory/* .
+buat configurasi ansible
+
+sudo nano /etc/ansible/ansible.cfg
+[defaults]
+
+host_key_checking=False
+
+pipelining=True
+
+forks=100
+
+Generate password kolla
+
+ kolla-genpwd
+setup konfigurasi Globals.yml
+
+sudo nano /etc/kolla/globals.yml
+kolla_base_distro: “ubuntu”
+
+kolla_install_type: “source”
+
+network_interface: “ens18”
+
+enable_cinder: “yes”
+
+kolla_internal_vip_address: “10.0.0.55”
+
+enable_haproxy: “no”
+
+keepalived_virtual_router_id: “55”
+
+enable_cinder_backend_lvm: “yes”
+
+nova_compute_virt_type: “kvm”
+
+verifikasi konfigurasi
+
+cat /etc/kolla/globals.yml | grep -v "#" |  tr -s [:space:]
+cek disk yg kosong/bukan os
+
+lsblk
+buat physical volume dan volume group pada disk yang kosong
+
+sudo pvcreate /dev/vdb /dev/vdc
+sudo vgcreate cinder-volumes /dev/vdb /dev/vdc
+sudo vgs
+bootstrap precheck deploy
+
+kolla-ansible -i ./all-in-one bootstrap-servers
+kolla-ansible -i ./all-in-one prechecks
+kolla-ansible -i ./all-in-one deploy
+DANGER!!!! do not run this!!! use this only in emergency condition.
+
+kolla-ansible -i ./all-in-one destroy
+install openstack clients
+
+pip install python-openstackclient -c https://releases.openstack.org/constraints/upper/xena
+kolla-ansible post-deploy
+. /etc/kolla/admin-openrc.sh
+inisiasi pertama
+
+/home/openstack/venv1/share/kolla-ansible/init-runonce
